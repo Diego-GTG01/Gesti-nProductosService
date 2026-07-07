@@ -1,0 +1,92 @@
+CREATE TABLE USUARIO (
+    idUsuario       NUMBER GENERATED ALWAYS AS IDENTITY,
+    nombre          VARCHAR2(100) NOT NULL, 
+    apellidoPaterno VARCHAR2(100) NOT NULL,
+    apellidoMaterno VARCHAR2(100),
+    username        VARCHAR2(100) NOT NULL UNIQUE,
+    email           VARCHAR2(255) NOT NULL UNIQUE, 
+    celular         VARCHAR2(30) NOT NULL,
+    telefono        VARCHAR2(30) NOT NULL,
+    password        VARCHAR2(255) NOT NULL,
+    PRIMARY KEY (idUsuario)
+);
+
+CREATE TABLE PRODUCTO (
+    idProducto      NUMBER GENERATED ALWAYS AS IDENTITY, 
+    folio           VARCHAR2(50) NOT NULL UNIQUE,
+    clave           VARCHAR2(10) NOT NULL,
+    nombre          VARCHAR2(200) NOT NULL,
+    precio          NUMBER(12, 2) NOT NULL,
+    status          NUMBER(1) DEFAULT 1 NOT NULL, 
+    fechaRegistro   TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+    fechaActualizacion   TIMESTAMP NOT NULL,
+    imagen CLOB,
+    idUsuario       NUMBER NOT NULL, 
+    
+    PRIMARY KEY (idProducto),
+    CONSTRAINT fk_producto_usuario FOREIGN KEY (idUsuario) REFERENCES USUARIO (idUsuario),
+    CONSTRAINT chk_precio_positivo CHECK (precio >= 0)
+);
+
+
+
+CREATE INDEX idx_prod_busqueda ON PRODUCTO (nombre, clave);
+CREATE INDEX idx_prod_precio ON PRODUCTO (precio);
+
+
+-- Usuario 1: Auditor Administrador
+INSERT INTO USUARIO (nombre, apellidoPaterno, apellidoMaterno, username, email, celular, telefono, password)
+VALUES (
+    'Carlos', 
+    'Mendoza', 
+    'García', 
+    'carlos.mendoza', 
+    'carlos.mendoza@institucion.gob.mx', 
+    '5512345678', 
+    '5555112233', 
+    '$2a$10$vX9B21m1nE9uO7KpR6tYueFpQ1vR2oX8yZ3wK4vM5uN6tP7qR8sS2' -- Simulación de Hash BCrypt
+);
+
+-- Usuario 2: Auditor de Soporte (Sin segundo apellido para probar la opcionalidad)
+INSERT INTO USUARIO (nombre, apellidoPaterno, apellidoMaterno, username, email, celular, telefono, password)
+VALUES (
+    'Ana', 
+    'Martínez', 
+    NULL, 
+    'ana.martinez', 
+    'ana.martinez@institucion.gob.mx', 
+    '5587654321', 
+    '5555443322', 
+    '$2a$10$eI0Y2b3c4d5e6f7g8h9i0jK1lM2nO3pQ4rS5tU6vW7xY8zA9bC0dE' -- Simulación de Hash BCrypt
+);
+
+
+-- Producto 1: Registrado por Carlos Mendoza (idUsuario = 1)
+INSERT INTO PRODUCTO (folio, clave, nombre, precio, status, fechaRegistro, fechaActualizacion, imagen, idUsuario)
+VALUES (
+    'PROD-20260706164501', -- Folio autogenerado con fecha simulada [cite: 11]
+    'PRIME001',            -- Clave máx 10 caracteres [cite: 11]
+    'Laptop Institucional Core i7 16GB RAM', -- Nombre descriptivo [cite: 11]
+    18500.50,              -- Precio decimal [cite: 11]
+    1,                     -- Status Activo [cite: 11]
+    TO_TIMESTAMP('2026-07-06 16:45:01', 'YYYY-MM-DD HH24:MI:SS'), -- Registro [cite: 11]
+    TO_TIMESTAMP('2026-07-06 16:45:01', 'YYYY-MM-DD HH24:MI:SS'), -- Actualización
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', -- Base64 simulado corto
+    1                      -- Relación con idUsuario 1 [cite: 11]
+);
+
+-- Producto 2: Registrado por Ana Martínez (idUsuario = 2)
+INSERT INTO PRODUCTO (folio, clave, nombre, precio, status, fechaRegistro, fechaActualizacion, imagen, idUsuario)
+VALUES (
+    'PROD-20260706164832', 
+    'DESK042', 
+    'Escritorio Ergonómico de Oficina Premium', 
+    4200.00, 
+    1, 
+    TO_TIMESTAMP('2026-07-06 16:48:32', 'YYYY-MM-DD HH24:MI:SS'), 
+    TO_TIMESTAMP('2026-07-06 16:48:32', 'YYYY-MM-DD HH24:MI:SS'), 
+    'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=',
+    2
+);
+
+COMMIT;
