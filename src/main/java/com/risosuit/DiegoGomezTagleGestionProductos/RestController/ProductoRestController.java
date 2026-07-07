@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.Mapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -20,7 +21,6 @@ public class ProductoRestController {
     @GetMapping
     public ResponseEntity<Result<Producto>> getAll() {
         Result<Producto> result = new Result<Producto>();
-
         try {
             result = productoDAO.getAll();
             if (result.correct) {
@@ -29,6 +29,24 @@ public class ProductoRestController {
                 return ResponseEntity.badRequest().body(result);
             }
 
+        } catch (Exception e) {
+            result.correct = false;
+            result.message = e.getLocalizedMessage();
+            result.ex = e;
+            return ResponseEntity.internalServerError().body(result);
+        }
+    }
+
+    @GetMapping(params = "idProducto")
+    public ResponseEntity<Result<Producto>> getById(@RequestParam("idProducto") long idProducto) {
+        Result<Producto> result = new Result<Producto>();
+        try {
+            result = productoDAO.getById(idProducto);
+            if (result.correct) {
+                return ResponseEntity.ok(result);
+            } else {
+                return ResponseEntity.badRequest().body(result);
+            }
         } catch (Exception e) {
             result.correct = false;
             result.message = e.getLocalizedMessage();
