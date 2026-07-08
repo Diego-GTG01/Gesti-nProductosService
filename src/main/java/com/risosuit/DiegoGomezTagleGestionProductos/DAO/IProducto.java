@@ -17,6 +17,6 @@ public interface IProducto {
 
     Result<Producto> update(Producto producto);
 
-    Result delete();
+    Result delete(long idProducto);
 
 }
