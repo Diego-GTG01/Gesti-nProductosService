@@ -6,6 +6,16 @@ public class Reporte {
     private String message;
     private String nombre;
     private String fileName;
+    private String file;
+
+    public String getFile() {
+        return file;
+    }
+
+    public void setFile(String file) {
+        this.file = file;
+    }
+    
 
     public int getStatus() {
         return status;

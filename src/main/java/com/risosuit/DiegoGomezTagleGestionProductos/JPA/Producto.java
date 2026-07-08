@@ -13,33 +13,51 @@ import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name="Producto")
+@Table(name = "Producto")
 public class Producto {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "idproducto")
     private long idProducto;
+
     @Column(name = "folio")
     private String folio;
+
     @Column(name = "clave")
     private String clave;
+
     @Column(name = "nombre")
     private String nombre;
+
+    @Column(name = "descripcion")
+    private String descripcion;
+
     @Column(name = "precio")
     private double precio;
+
     @Column(name = "status")
     private int status;
+
     @Column(name = "fecharegistro")
     private LocalDateTime fechaRegistro;
+
     @Column(name = "fechaactualizacion")
     private LocalDateTime fechaActualizacion;
+
     @Lob
     @Column(name = "imagen")
     private String imagen;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "iddepartamento", nullable = false)
+    private Departamento departamento;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "idusuario", nullable = false)
     private Usuario usuario;
+
+
 
     public long getIdProducto() {
         return idProducto;
@@ -120,5 +138,23 @@ public class Producto {
     public void setImagen(String imagen) {
         this.imagen = imagen;
     }
+
+    public String getDescripcion() {
+        return descripcion;
+    }
+
+    public void setDescripcion(String descripcion) {
+        this.descripcion = descripcion;
+    }
+
+    public Departamento getDepartamento() {
+        return departamento;
+    }
+
+    public void setDepartamento(Departamento departamento) {
+        this.departamento = departamento;
+    }
+    
+    
 
 }
