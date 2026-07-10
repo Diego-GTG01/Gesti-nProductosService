@@ -1,12 +1,12 @@
 package com.risosuit.DiegoGomezTagleGestionProductos.DAO;
 
 import com.risosuit.DiegoGomezTagleGestionProductos.DTO.Result;
-import com.risosuit.DiegoGomezTagleGestionProductos.JPA.Producto;
 import com.risosuit.DiegoGomezTagleGestionProductos.JPA.Usuario;
+import com.risosuit.DiegoGomezTagleGestionProductos.Repository.UsuarioRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
-import java.util.ArrayList;
-import java.util.List;
+import jakarta.transaction.Transactional;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
@@ -14,26 +14,21 @@ import org.springframework.stereotype.Repository;
 public class UsuarioDAOImplementation implements IUsuario {
 
     @Autowired
-    private EntityManager entityManager;
+    private UsuarioRepository usuarioRepository;
 
     @Override
     public Result<Usuario> getByUsername(String username) {
-        Result<Usuario> result = new Result<Usuario>();
+        Result<Usuario> result = new Result<>();
         try {
-            TypedQuery<Usuario> query = entityManager.createQuery("FROM Usuario u WHERE u.username = :username", Usuario.class);
-            query.setParameter("username", username);
-
-            Usuario usuario = query.getSingleResultOrNull();
-
-            if (usuario == null) {
-                result.message = "Usuario no encontrado";
-
-            } else {
+            Optional<Usuario> usuario = usuarioRepository.findByUsername(username);
+            if (usuario.isPresent()) {
                 result.correct = true;
-                result.message = "Usuario obtenidos con exito";
-                result.object = usuario;
+                result.message = "Usuario obtenido con éxito";
+                result.object = usuario.get();
+            } else {
+                result.correct = false;
+                result.message = "Usuario no encontrado";
             }
-
         } catch (Exception e) {
             result.correct = false;
             result.message = e.getLocalizedMessage();
@@ -44,22 +39,17 @@ public class UsuarioDAOImplementation implements IUsuario {
 
     @Override
     public Result<Usuario> getByEmail(String email) {
-        Result<Usuario> result = new Result<Usuario>();
+        Result<Usuario> result = new Result<>();
         try {
-            TypedQuery<Usuario> query = entityManager.createQuery("FROM Usuario u WHERE u.email = :email", Usuario.class);
-            query.setParameter("email", email);
-
-            Usuario usuario = query.getSingleResultOrNull();
-
-            if (usuario == null) {
-                result.message = "Usuario no encontrado";
-
-            } else {
+            Optional<Usuario> usuario = usuarioRepository.findByEmail(email);
+            if (usuario.isPresent()) {
                 result.correct = true;
-                result.message = "Usuario obtenidos con exito";
-                result.object = usuario;
+                result.message = "Usuario obtenido con éxito";
+                result.object = usuario.get();
+            } else {
+                result.correct = false;
+                result.message = "Usuario no encontrado";
             }
-
         } catch (Exception e) {
             result.correct = false;
             result.message = e.getLocalizedMessage();
@@ -69,34 +59,26 @@ public class UsuarioDAOImplementation implements IUsuario {
     }
 
     @Override
-    public Result<Usuario> add(Usuario usuarioJPA) {
-        Result<Usuario> result = new Result<Usuario>();
+    @Transactional
+    public Result<Usuario> add(Usuario usuario) {
+        Result<Usuario> result = new Result<>();
         try {
-            TypedQuery<Usuario> query = entityManager.createQuery(
-                    "FROM Usuario u WHERE u.email = :email OR u.username = :username",
-                    Usuario.class
-            );
-            query.setParameter("email", usuarioJPA.getEmail());
-            query.setParameter("username", usuarioJPA.getUsername());
-
-            Usuario usuarioExistente = query.getSingleResultOrNull();
-
-            if (usuarioExistente != null) {
+            Optional<Usuario> existente
+                    = usuarioRepository.findByEmailOrUsername(
+                            usuario.getEmail(),
+                            usuario.getUsername());
+            if (existente.isPresent()) {
                 result.correct = false;
-
-                if (usuarioExistente.getEmail().equalsIgnoreCase(usuarioJPA.getEmail())) {
+                if (existente.get().getEmail().equalsIgnoreCase(usuario.getEmail())) {
                     result.message = "El usuario con este email ya existe.";
                 } else {
                     result.message = "El nombre de usuario ya está en uso.";
                 }
-
-            } else {
-                entityManager.persist(usuarioJPA);
-                result.correct = true;
-                result.message = "Usuario registrado con éxito";
-                result.object = usuarioJPA;
+                return result;
             }
-
+            result.object = usuarioRepository.save(usuario);
+            result.correct = true;
+            result.message = "Usuario registrado con éxito";
         } catch (Exception e) {
             result.correct = false;
             result.message = e.getLocalizedMessage();
@@ -106,33 +88,32 @@ public class UsuarioDAOImplementation implements IUsuario {
     }
 
     @Override
-    public Result<Usuario> update(Usuario usuarioJPA) {
-        Result<Usuario> result = new Result<Usuario>();
+    @Transactional
+    public Result<Usuario> update(Usuario usuario) {
+        Result<Usuario> result = new Result<>();
         try {
-            TypedQuery<Usuario> query = entityManager.createQuery(
-                    "FROM Usuario u WHERE (u.email = :email OR u.username = :username) AND u.idUsuario != :idUsuario",
-                    Usuario.class
-            );
-            query.setParameter("email", usuarioJPA.getEmail());
-            query.setParameter("username", usuarioJPA.getUsername());
-            query.setParameter("idUsuario", usuarioJPA.getIdUsuario());
-
-            Usuario usuarioExistente = query.getSingleResultOrNull();
-
-            if (usuarioExistente != null) {
+            if (!usuarioRepository.existsById(usuario.getIdUsuario())) {
                 result.correct = false;
-                if (usuarioExistente.getEmail().equalsIgnoreCase(usuarioJPA.getEmail())) {
+                result.message = "El usuario no existe.";
+                return result;
+            }
+            Optional<Usuario> existente
+                    = usuarioRepository.findByEmailOrUsernameAndIdUsuarioNot(
+                            usuario.getEmail(),
+                            usuario.getUsername(),
+                            usuario.getIdUsuario());
+            if (existente.isPresent()) {
+                result.correct = false;
+                if (existente.get().getEmail().equalsIgnoreCase(usuario.getEmail())) {
                     result.message = "El email ya está registrado por otro usuario.";
                 } else {
                     result.message = "El nombre de usuario ya está en uso.";
                 }
-            } else {
-                Usuario usuarioActualizado = entityManager.merge(usuarioJPA);
-                result.correct = true;
-                result.message = "Usuario actualizado con éxito";
-                result.object = usuarioActualizado;
+                return result;
             }
-
+            result.object = usuarioRepository.save(usuario);
+            result.correct = true;
+            result.message = "Usuario actualizado con éxito";
         } catch (Exception e) {
             result.correct = false;
             result.message = e.getLocalizedMessage();
@@ -142,21 +123,20 @@ public class UsuarioDAOImplementation implements IUsuario {
     }
 
     @Override
+    @Transactional
     public Result<Usuario> delete(long idUsuario) {
-        Result<Usuario> result = new Result<Usuario>();
+        Result<Usuario> result = new Result<>();
         try {
-            Usuario usuarioExistente = entityManager.find(Usuario.class, idUsuario);
-
-            if (usuarioExistente == null) {
+            Optional<Usuario> usuario = usuarioRepository.findById(idUsuario);
+            if (usuario.isEmpty()) {
                 result.correct = false;
                 result.message = "El usuario no existe.";
-            } else {
-                entityManager.remove(usuarioExistente);
-                result.correct = true;
-                result.message = "Usuario eliminado con éxito";
-                result.object = usuarioExistente;
+                return result;
             }
-
+            usuarioRepository.deleteById(idUsuario);
+            result.correct = true;
+            result.message = "Usuario eliminado con éxito";
+            result.object = usuario.get();
         } catch (Exception e) {
             result.correct = false;
             result.message = e.getLocalizedMessage();

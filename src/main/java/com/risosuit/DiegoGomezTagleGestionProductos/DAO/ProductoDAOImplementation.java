@@ -1,34 +1,41 @@
 package com.risosuit.DiegoGomezTagleGestionProductos.DAO;
 
 import com.risosuit.DiegoGomezTagleGestionProductos.DTO.Result;
+import com.risosuit.DiegoGomezTagleGestionProductos.JPA.Departamento;
 import com.risosuit.DiegoGomezTagleGestionProductos.JPA.Producto;
 import com.risosuit.DiegoGomezTagleGestionProductos.JPA.Usuario;
+import com.risosuit.DiegoGomezTagleGestionProductos.Repository.DepartamentoRepository;
+import com.risosuit.DiegoGomezTagleGestionProductos.Repository.ProductoRepository;
+import com.risosuit.DiegoGomezTagleGestionProductos.Repository.UsuarioRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import jakarta.transaction.Transactional;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class ProductoDAOImplementation implements IProducto {
-    
+
     @Autowired
-    private EntityManager entityManager;
-    
+    private ProductoRepository productoRepository;
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private DepartamentoRepository departamentoRepository;
+
     @Override
     public Result<Producto> getAll() {
-        
-        Result<Producto> result = new Result<Producto>();
+        Result<Producto> result = new Result<>();
         try {
-            TypedQuery<Producto> query = entityManager.createQuery("FROM Producto p JOIN FETCH p.usuario", Producto.class);
-            List<Producto> productos = query.getResultList();
-            
+            result.objects = new ArrayList<>(productoRepository.findAll());
             result.correct = true;
-            result.message = "Productos obtenidos con exito";
-            result.objects = new ArrayList<>(productos);
-            
+            result.message = "Productos obtenidos con éxito";
         } catch (Exception e) {
             result.correct = false;
             result.message = e.getLocalizedMessage();
@@ -36,19 +43,20 @@ public class ProductoDAOImplementation implements IProducto {
         }
         return result;
     }
-    
+
     @Override
     public Result<Producto> getById(long idProducto) {
-        Result<Producto> result = new Result<Producto>();
+        Result<Producto> result = new Result<>();
         try {
-            TypedQuery<Producto> query = entityManager.createQuery("FROM Producto p JOIN FETCH p.usuario WHERE p.idProducto = :idProducto", Producto.class);
-            query.setParameter("idProducto", idProducto);
-            Producto producto = query.getSingleResult();
-            
-            result.correct = true;
-            result.message = "Productos obtenidos con exito";
-            result.object = producto;
-            
+            Optional<Producto> producto = productoRepository.findById(idProducto);
+            if (producto.isPresent()) {
+                result.correct = true;
+                result.message = "Producto obtenido con éxito";
+                result.object = producto.get();
+            } else {
+                result.correct = false;
+                result.message = "Producto no encontrado";
+            }
         } catch (Exception e) {
             result.correct = false;
             result.message = e.getLocalizedMessage();
@@ -56,19 +64,21 @@ public class ProductoDAOImplementation implements IProducto {
         }
         return result;
     }
-    
+
     @Override
     public Result<Producto> getByFolio(String folio) {
-        Result<Producto> result = new Result<Producto>();
+        Result<Producto> result = new Result<>();
         try {
-            TypedQuery<Producto> query = entityManager.createQuery("FROM Producto p JOIN FETCH p.usuario WHERE p.folio = :folio", Producto.class);
-            query.setParameter("folio", folio);
-            Producto producto = query.getSingleResult();
-            
-            result.correct = true;
-            result.message = "Productos obtenidos con exito";
-            result.object = producto;
-            
+            Optional<Producto> producto = productoRepository.findByFolio(folio);
+            if (producto.isPresent()) {
+                result.correct = true;
+                result.message = "Producto obtenido con éxito";
+                result.object = producto.get();
+
+            } else {
+                result.correct = false;
+                result.message = "Producto no encontrado";
+            }
         } catch (Exception e) {
             result.correct = false;
             result.message = e.getLocalizedMessage();
@@ -76,19 +86,20 @@ public class ProductoDAOImplementation implements IProducto {
         }
         return result;
     }
-    
+
     @Override
     public Result<Producto> getByClave(String clave) {
-        Result<Producto> result = new Result<Producto>();
+        Result<Producto> result = new Result<>();
         try {
-            TypedQuery<Producto> query = entityManager.createQuery("FROM Producto p JOIN FETCH p.usuario WHERE p.clave = :clave", Producto.class);
-            query.setParameter("idProducto", clave);
-            Producto producto = query.getSingleResult();
-            
-            result.correct = true;
-            result.message = "Productos obtenidos con exito";
-            result.object = producto;
-            
+            Optional<Producto> producto = productoRepository.findByClave(clave);
+            if (producto.isPresent()) {
+                result.correct = true;
+                result.message = "Producto obtenido con éxito";
+                result.object = producto.get();
+            } else {
+                result.correct = false;
+                result.message = "Producto no encontrado";
+            }
         } catch (Exception e) {
             result.correct = false;
             result.message = e.getLocalizedMessage();
@@ -96,128 +107,110 @@ public class ProductoDAOImplementation implements IProducto {
         }
         return result;
     }
-    
+
     @Override
     @Transactional
     public Result<Producto> add(Producto producto) {
-        Result<Producto> result = new Result<Producto>();
+        Result<Producto> result = new Result<>();
         try {
             if (producto == null) {
                 result.correct = false;
                 result.message = "El producto no puede ser nulo";
                 return result;
             }
-            if (producto.getUsuario() == null || producto.getUsuario().getIdUsuario() == 0) {
+            if (producto.getUsuario() == null) {
                 result.correct = false;
-                result.message = "El producto debe tener un usuario asignado con un ID válido";
+                result.message = "Debe seleccionar un usuario";
                 return result;
             }
-            Usuario usuario = entityManager.find(Usuario.class, producto.getUsuario().getIdUsuario());
+            Usuario usuario = usuarioRepository.findById(producto.getUsuario().getIdUsuario())
+                    .orElse(null);
+            Departamento departamento = departamentoRepository.findById(producto.getDepartamento().getIdDepartamento()).orElse(null);
             if (usuario == null) {
                 result.correct = false;
-                result.message = "El usuario especificado no existe en la base de datos";
+                result.message = "El usuario no existe";
                 return result;
             }
+            if (departamento == null) {
+                result.correct = false;
+                result.message = "El usuario no existe";
+                return result;
+            }
+            producto.setDepartamento(departamento);
+            producto.setFolio(generarFolio(producto));
             producto.setUsuario(usuario);
-            entityManager.persist(producto);
+            producto.setFechaActualizacion(LocalDateTime.now());
+            producto.setFechaRegistro(LocalDateTime.now());
+            result.object = productoRepository.save(producto);
             result.correct = true;
             result.message = "Producto guardado con éxito";
-            result.object = producto;
-            
-        } catch (jakarta.persistence.PersistenceException e) {
-            result.correct = false;
-            result.message = "Error de persistencia en la base de datos: " + e.getLocalizedMessage();
-            result.ex = e;
         } catch (Exception e) {
             result.correct = false;
-            result.message = "Error inesperado: " + e.getLocalizedMessage();
+            result.message = e.getLocalizedMessage();
             result.ex = e;
         }
-        
         return result;
     }
-    
+
     @Override
     @Transactional
     public Result<Producto> update(Producto producto) {
-        Result<Producto> result = new Result<Producto>();
+        Result<Producto> result = new Result<>();
         try {
-            if (producto == null) {
+            if (!productoRepository.existsById(producto.getIdProducto())) {
                 result.correct = false;
-                result.message = "El producto no puede ser nulo";
+                result.message = "El producto no existe";
                 return result;
             }
-            
-            Producto productoJPA = entityManager.find(Producto.class, producto.getIdProducto());
-            if (productoJPA == null) {
-                result.correct = false;
-                result.message = "El producto con el ID especificado no existe en la base de datos";
-                return result;
-            }
-            
-            if (producto.getUsuario() == null || producto.getUsuario().getIdUsuario() == 0) {
-                result.correct = false;
-                result.message = "El producto debe tener un usuario asignado con un ID válido";
-                return result;
-            }
-            
-            Usuario usuario = entityManager.find(Usuario.class, producto.getUsuario().getIdUsuario());
+            Usuario usuario = usuarioRepository.findById(producto.getUsuario().getIdUsuario())
+                    .orElse(null);
             if (usuario == null) {
                 result.correct = false;
-                result.message = "El usuario especificado no existe en la base de datos";
+                result.message = "El usuario no existe";
                 return result;
             }
-            
             producto.setUsuario(usuario);
-            
-            Producto productoActualizado = entityManager.merge(producto);
-            
+            result.object = productoRepository.save(producto);
             result.correct = true;
-            result.message = "Producto actualizado con éxito"; // Mensaje más preciso para un update
-            result.object = productoActualizado;
-            
-        } catch (jakarta.persistence.PersistenceException e) {
-            result.correct = false;
-            result.message = "Error de persistencia en la base de datos: " + e.getLocalizedMessage();
-            result.ex = e;
+            result.message = "Producto actualizado con éxito";
         } catch (Exception e) {
             result.correct = false;
-            result.message = "Error inesperado: " + e.getLocalizedMessage();
+            result.message = e.getLocalizedMessage();
             result.ex = e;
         }
-        
         return result;
     }
-    
+
     @Override
     @Transactional
     public Result delete(long idProducto) {
-        Result<Producto> result = new Result<Producto>();
+        Result<Producto> result = new Result<>();
         try {
-            
-            Producto productoJPA = entityManager.find(Producto.class, idProducto);
-            if (productoJPA == null) {
+            if (!productoRepository.existsById(idProducto)) {
                 result.correct = false;
-                result.message = "El producto con el ID especificado no existe en la base de datos";
+                result.message = "El producto no existe";
                 return result;
             }
-            
-            entityManager.remove(productoJPA);
-            
+            productoRepository.deleteById(idProducto);
             result.correct = true;
-            result.message = "Producto actualizado con éxito"; // Mensaje más preciso para un update
-            
-        } catch (jakarta.persistence.PersistenceException e) {
-            result.correct = false;
-            result.message = "Error de persistencia en la base de datos: " + e.getLocalizedMessage();
-            result.ex = e;
+            result.message = "Producto eliminado con éxito";
         } catch (Exception e) {
             result.correct = false;
-            result.message = "Error inesperado: " + e.getLocalizedMessage();
+            result.message = e.getLocalizedMessage();
             result.ex = e;
         }
-        
         return result;
     }
-    
+
+    private String generarFolio(Producto producto) {
+        if (producto == null) {
+            return null;
+        } else {
+            String cad = "";
+            cad += producto.getDepartamento().getPrefijo();
+            cad += "-" + LocalDateTime.now().toString();
+            return cad;
+        }
+    }
+
 }

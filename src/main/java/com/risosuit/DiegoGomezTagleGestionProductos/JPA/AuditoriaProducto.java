@@ -38,8 +38,6 @@ public class AuditoriaProducto {
     @Column(name = "fechaoperacion")
     private LocalDateTime fechaOperacion;
 
-    
-
     public long getIdAuditoria() {
         return idAuditoria;
     }
