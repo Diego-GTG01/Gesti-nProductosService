@@ -278,21 +278,28 @@ public class ProductoDAOImplementation implements IProducto {
     @Override
     @Transactional
     public Result<Producto> delete(long idProducto, long idUsuario) {
-
         Result<Producto> result = new Result<>();
-
         try {
-
-            if (!productoRepository.existsById(idProducto)) {
+            Optional<Producto> optionalProducto = productoRepository.findById(idProducto);
+            if (!optionalProducto.isPresent()) {
                 result.correct = false;
                 result.message = "El producto no existe";
                 return result;
             }
-
-            Producto producto = productoRepository.findById(idProducto).get();
-
+            Producto producto = optionalProducto.get();
+            String tipoOperacion;
+            if (producto.getStatus() == 1) {
+                producto.setStatus(0);
+                tipoOperacion = "DESACTIVACION";
+            } else {
+                producto.setStatus(1);
+                tipoOperacion = "ACTIVACION";
+            }
+            producto.setFechaActualizacion(LocalDateTime.now());
+            productoRepository.save(producto);
             String descripcion = String.format(
-                    "Id=%d, Folio=%s, Clave=%s, Nombre=%s, Descripción=%s, Precio=%s, Status=%d, FechaRegistro=%s, FechaActualizacion=%s",
+                    "Producto %s. Id=%d, Folio=%s, Clave=%s, Nombre=%s, Descripción=%s, Precio=%s, Status=%d, FechaRegistro=%s, FechaActualizacion=%s",
+                    tipoOperacion.equals("ACTIVACION") ? "activado" : "desactivado",
                     producto.getIdProducto(),
                     producto.getFolio(),
                     producto.getClave(),
@@ -307,21 +314,20 @@ public class ProductoDAOImplementation implements IProducto {
             auditoriaDAO.registrarAuditoria(
                     producto,
                     producto.getUsuario(),
-                    "ELIMINACION",
+                    tipoOperacion,
                     descripcion
             );
 
-            productoRepository.deleteById(idProducto);
-
             result.correct = true;
-            result.message = "Producto eliminado con éxito";
+            result.object = producto;
+            result.message = tipoOperacion.equals("ACTIVACION")
+                    ? "Producto activado con éxito"
+                    : "Producto desactivado con éxito";
 
         } catch (Exception e) {
-
             result.correct = false;
             result.message = e.getLocalizedMessage();
             result.ex = e;
-
         }
 
         return result;
