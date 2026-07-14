@@ -2,6 +2,9 @@ package com.risosuit.DiegoGomezTagleGestionProductos.RestController;
 
 import com.risosuit.DiegoGomezTagleGestionProductos.DTO.LoginRequest;
 import com.risosuit.DiegoGomezTagleGestionProductos.DTO.LoginResponse;
+import com.risosuit.DiegoGomezTagleGestionProductos.DTO.Result;
+import com.risosuit.DiegoGomezTagleGestionProductos.JPA.Usuario;
+import com.risosuit.DiegoGomezTagleGestionProductos.Repository.UsuarioRepository;
 import com.risosuit.DiegoGomezTagleGestionProductos.Services.JwtService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -20,27 +23,47 @@ public class AuthRestController {
 
     @Autowired
     private JwtService jwtService;
+    
+    @Autowired
+    private UsuarioRepository UsuarioRepository;
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<Result<LoginResponse>> login(@RequestBody LoginRequest request) {
+
+        Result<LoginResponse> result = new Result<>();
 
         try {
+
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
                             request.getUsername(),
-                            request.getPassword()));
+                            request.getPassword()
+                    )
+            );
 
-            String token = jwtService.generateToken(request.getUsername());
-            String username = jwtService.extractUsername(token);
+            Usuario usuario = UsuarioRepository
+                    .findByUsername(request.getUsername())
+                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-            return ResponseEntity.ok(new LoginResponse(token, username));
+            String token = jwtService.generateToken(
+                    usuario.getUsername(),
+                    usuario.getIdUsuario()
+            );
+
+            result.correct = true;
+            result.message = "Usuario logueado";
+            result.object = new LoginResponse(token, usuario.getUsername(), usuario.getIdUsuario());
+
+            return ResponseEntity.ok(result);
+
         } catch (BadCredentialsException ex) {
-            return ResponseEntity
-                    .status(401)
-                    .body("Usuario o contraseña incorrectos");
 
+            result.correct = false;
+            result.message = "Usuario o password incorrectos";
+            result.ex = ex;
+
+            return ResponseEntity.status(401).body(result);
         }
-
     }
 
     @GetMapping("/validate")

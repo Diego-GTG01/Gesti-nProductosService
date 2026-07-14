@@ -1,21 +1,29 @@
 package com.risosuit.DiegoGomezTagleGestionProductos.DAO;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.risosuit.DiegoGomezTagleGestionProductos.DTO.Result;
+import com.risosuit.DiegoGomezTagleGestionProductos.JPA.AuditoriaProducto;
 import com.risosuit.DiegoGomezTagleGestionProductos.JPA.Departamento;
 import com.risosuit.DiegoGomezTagleGestionProductos.JPA.Producto;
 import com.risosuit.DiegoGomezTagleGestionProductos.JPA.Usuario;
+import com.risosuit.DiegoGomezTagleGestionProductos.Repository.AuditoriaProductoRepository;
 import com.risosuit.DiegoGomezTagleGestionProductos.Repository.DepartamentoRepository;
 import com.risosuit.DiegoGomezTagleGestionProductos.Repository.ProductoRepository;
+import com.risosuit.DiegoGomezTagleGestionProductos.Repository.TipoOperacionRepository;
 import com.risosuit.DiegoGomezTagleGestionProductos.Repository.UsuarioRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import jakarta.transaction.Transactional;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
+import org.springframework.web.multipart.MultipartFile;
 
 @Repository
 public class ProductoDAOImplementation implements IProducto {
@@ -28,6 +36,12 @@ public class ProductoDAOImplementation implements IProducto {
 
     @Autowired
     private DepartamentoRepository departamentoRepository;
+
+    @Autowired
+    private TipoOperacionRepository tipoOperacionRepository;
+
+    @Autowired
+    private AuditoriaProductoDAOImplementation auditoriaDAO;
 
     @Override
     public Result<Producto> getAll() {
@@ -137,11 +151,13 @@ public class ProductoDAOImplementation implements IProducto {
                 return result;
             }
             producto.setDepartamento(departamento);
-            producto.setFolio(generarFolio(producto));
-            producto.setUsuario(usuario);
             producto.setFechaActualizacion(LocalDateTime.now());
             producto.setFechaRegistro(LocalDateTime.now());
-            result.object = productoRepository.save(producto);
+            producto.setFolio(generarFolio(producto));
+            producto.setUsuario(usuario);
+            producto = productoRepository.save(producto);
+            auditoriaDAO.registrarAuditoria(producto, producto.getUsuario(), "ALTA", "SE REGISTRÓ CORRECTAMENTE EL PRODUCTO");
+            result.object = producto;
             result.correct = true;
             result.message = "Producto guardado con éxito";
         } catch (Exception e) {
@@ -157,7 +173,9 @@ public class ProductoDAOImplementation implements IProducto {
     public Result<Producto> update(Producto producto) {
         Result<Producto> result = new Result<>();
         try {
-            if (!productoRepository.existsById(producto.getIdProducto())) {
+            Producto productoAnterior = productoRepository.findById(producto.getIdProducto())
+                    .orElse(null);
+            if (productoAnterior == null) {
                 result.correct = false;
                 result.message = "El producto no existe";
                 return result;
@@ -169,34 +187,186 @@ public class ProductoDAOImplementation implements IProducto {
                 result.message = "El usuario no existe";
                 return result;
             }
-            producto.setUsuario(usuario);
+            Departamento departamento = departamentoRepository
+                    .findById(producto.getDepartamento().getIdDepartamento())
+                    .orElse(null);
+
+            if (departamento == null) {
+                result.correct = false;
+                result.message = "El departamento no existe";
+                return result;
+            }
+
+            StringBuilder descripcion = new StringBuilder("Se modificó el producto:");
+
+            if (!Objects.equals(productoAnterior.getNombre(), producto.getNombre())) {
+                descripcion.append("\n• Nombre: '")
+                        .append(productoAnterior.getNombre())
+                        .append("' → '")
+                        .append(producto.getNombre())
+                        .append("'");
+            }
+
+            if (!Objects.equals(productoAnterior.getClave(), producto.getClave())) {
+                descripcion.append("\n• Clave: '")
+                        .append(productoAnterior.getClave())
+                        .append("' → '")
+                        .append(producto.getClave())
+                        .append("'");
+            }
+
+            if ((productoAnterior.getPrecio() != producto.getPrecio())) {
+                descripcion.append("\n• Precio: ")
+                        .append(productoAnterior.getPrecio())
+                        .append(" → ")
+                        .append(producto.getPrecio());
+            }
+
+            if (!Objects.equals(productoAnterior.getStatus(), producto.getStatus())) {
+                descripcion.append("\n• Status: ")
+                        .append(productoAnterior.getStatus())
+                        .append(" → ")
+                        .append(producto.getStatus());
+            }
+
+            if (!Objects.equals(
+                    productoAnterior.getDepartamento().getIdDepartamento(),
+                    departamento.getIdDepartamento())) {
+
+                descripcion.append("\n• Departamento: '")
+                        .append(productoAnterior.getDepartamento().getNombre())
+                        .append("' → '")
+                        .append(departamento.getNombre())
+                        .append("'");
+            }
+
+            if (!Objects.equals(productoAnterior.getDescripcion(), producto.getDescripcion())) {
+                descripcion.append("\n• Descripción: '")
+                        .append(productoAnterior.getDescripcion())
+                        .append("' → '")
+                        .append(producto.getDescripcion())
+                        .append("'");
+            }
+
+            producto.setDepartamento(departamento);
+
+            producto.setFechaActualizacion(LocalDateTime.now());
+
+            producto.setFechaRegistro(productoAnterior.getFechaRegistro());
+            producto.setFolio(productoAnterior.getFolio());
+
             result.object = productoRepository.save(producto);
+
+            auditoriaDAO.registrarAuditoria(
+                    result.object,
+                    usuario,
+                    "MODIFICACION",
+                    descripcion.toString()
+            );
             result.correct = true;
             result.message = "Producto actualizado con éxito";
+
         } catch (Exception e) {
             result.correct = false;
             result.message = e.getLocalizedMessage();
             result.ex = e;
         }
+
         return result;
     }
 
     @Override
     @Transactional
-    public Result delete(long idProducto) {
+    public Result<Producto> delete(long idProducto, long idUsuario) {
+
         Result<Producto> result = new Result<>();
+
         try {
+
             if (!productoRepository.existsById(idProducto)) {
                 result.correct = false;
                 result.message = "El producto no existe";
                 return result;
             }
+
+            Producto producto = productoRepository.findById(idProducto).get();
+
+            String descripcion = String.format(
+                    "Id=%d, Folio=%s, Clave=%s, Nombre=%s, Descripción=%s, Precio=%s, Status=%d, FechaRegistro=%s, FechaActualizacion=%s",
+                    producto.getIdProducto(),
+                    producto.getFolio(),
+                    producto.getClave(),
+                    producto.getNombre(),
+                    producto.getDescripcion(),
+                    producto.getPrecio(),
+                    producto.getStatus(),
+                    producto.getFechaRegistro(),
+                    producto.getFechaActualizacion()
+            );
+
+            auditoriaDAO.registrarAuditoria(
+                    producto,
+                    producto.getUsuario(),
+                    "ELIMINACION",
+                    descripcion
+            );
+
             productoRepository.deleteById(idProducto);
+
             result.correct = true;
             result.message = "Producto eliminado con éxito";
+
         } catch (Exception e) {
+
             result.correct = false;
             result.message = e.getLocalizedMessage();
+            result.ex = e;
+
+        }
+
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public Result<Producto> updateImagen(Producto producto, MultipartFile imagen) {
+        Result<Producto> result = new Result<>();
+        try {
+            if (imagen == null || imagen.isEmpty()) {
+                result.correct = false;
+                result.message = "La imagen proporcionada está vacía o no es válida";
+                return result;
+            }
+
+            Optional<Producto> productoOptional = productoRepository.findById(producto.getIdProducto());
+            if (productoOptional.isEmpty()) {
+                result.correct = false;
+                result.message = "El producto no existe";
+                return result;
+            }
+
+            Producto productoJPA = productoOptional.get();
+            productoJPA.setImagen(Base64.getEncoder().encodeToString(imagen.getBytes()));
+            productoJPA.setFechaActualizacion(LocalDateTime.now());
+            productoJPA.setUsuario(producto.getUsuario());
+
+            result.object = productoRepository.save(productoJPA);
+            auditoriaDAO.registrarAuditoria(
+                    result.object,
+                    producto.getUsuario(),
+                    "MODIFICACION",
+                    "Se cambio la imagen"
+            );
+            result.correct = true;
+            result.message = "Producto actualizado con éxito";
+
+        } catch (IOException e) {
+            result.correct = false;
+            result.message = "Error al procesar el archivo de imagen";
+            result.ex = e;
+        } catch (Exception e) {
+            result.correct = false;
+            result.message = "Ocurrió un error inesperado: " + e.getLocalizedMessage();
             result.ex = e;
         }
         return result;
@@ -208,7 +378,7 @@ public class ProductoDAOImplementation implements IProducto {
         } else {
             String cad = "";
             cad += producto.getDepartamento().getPrefijo();
-            cad += "-" + LocalDateTime.now().toString();
+            cad += "-" + producto.getFechaRegistro().toString();
             return cad;
         }
     }

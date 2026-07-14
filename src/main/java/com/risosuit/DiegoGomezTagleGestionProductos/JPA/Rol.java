@@ -9,26 +9,23 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Column;
-import jakarta.persistence.Table;
-
 
 @Entity
-@Table(name = "TIPOOPERACION")
-public class TipoOperacion {
+public class Rol {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name="idtipooperacion")
-    private int idTipoOperacion;
+    @Column(name = "idrol")
+    private long idRol;
     @Column(name = "nombre")
     private String nombre;
 
-    public int getIdTipoOperacion() {
-        return idTipoOperacion;
+    public long getIdRol() {
+        return idRol;
     }
 
-    public void setIdTipoOperacion(int idTipoOperacion) {
-        this.idTipoOperacion = idTipoOperacion;
+    public void setIdRol(long idRol) {
+        this.idRol = idRol;
     }
 
     public String getNombre() {
@@ -38,7 +35,4 @@ public class TipoOperacion {
     public void setNombre(String nombre) {
         this.nombre = nombre;
     }
-
-    
-    
 }

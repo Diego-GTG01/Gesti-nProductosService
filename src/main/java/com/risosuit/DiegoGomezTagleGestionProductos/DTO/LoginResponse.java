@@ -8,6 +8,24 @@ public class LoginResponse {
 
     private String token;
     private String username;
+    private long idUsuario;
+
+    public LoginResponse(String token, String username, long idUsuario) {
+        this.token = token;
+        this.username = username;
+        this.idUsuario = idUsuario;
+    }
+    
+    
+
+    public long getIdUsuario() {
+        return idUsuario;
+    }
+
+    public void setIdUsuario(long idUsuario) {
+        this.idUsuario = idUsuario;
+    }
+    
 
     public LoginResponse(String token, String username) {
         this.token = token;

@@ -12,7 +12,7 @@ import jakarta.persistence.ManyToOne;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "AuditoriaProducto")
+@Table(name = "AUDITORIAPRODUCTO")
 public class AuditoriaProducto {
 
     @Id
@@ -28,8 +28,8 @@ public class AuditoriaProducto {
     @JoinColumn(name = "idtipooperacion", nullable = false)
     private TipoOperacion tipoOperacion;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "idusuario", nullable = false)
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "idusuario")
     private Usuario usuario;
 
     @Column(name = "descripcioncambio")
@@ -85,7 +85,5 @@ public class AuditoriaProducto {
     public void setFechaOperacion(LocalDateTime fechaOperacion) {
         this.fechaOperacion = fechaOperacion;
     }
-
-    
 
 }
