@@ -318,3 +318,65 @@ VALUES (
 ------------------------------------------------------------
 
 COMMIT;
+
+------------------------------------------------------------
+-- TABLA ROL
+------------------------------------------------------------
+
+CREATE TABLE Rol (
+
+    idRol       NUMBER PRIMARY KEY,
+    nombre      VARCHAR2(50) NOT NULL UNIQUE
+
+);
+
+------------------------------------------------------------
+-- AGREGAR CAMPO idRol A USUARIO
+------------------------------------------------------------
+
+ALTER TABLE Usuario
+ADD (
+    idRol NUMBER
+);
+
+------------------------------------------------------------
+-- LLAVE FORÁNEA
+------------------------------------------------------------
+
+ALTER TABLE Usuario
+ADD CONSTRAINT fkUsuarioRol
+FOREIGN KEY (idRol)
+REFERENCES Rol(idRol);
+
+------------------------------------------------------------
+-- CATÁLOGO DE ROLES
+------------------------------------------------------------
+
+INSERT INTO Rol (idRol, nombre)
+VALUES (1, 'ADMINISTRADOR');
+
+INSERT INTO Rol (idRol, nombre)
+VALUES (2, 'USUARIO');
+
+------------------------------------------------------------
+-- ASIGNAR ROL A LOS USUARIOS EXISTENTES
+------------------------------------------------------------
+
+UPDATE Usuario
+SET idRol = 1
+WHERE idUsuario = 1;
+
+UPDATE Usuario
+SET idRol = 2
+WHERE idUsuario = 2;
+
+------------------------------------------------------------
+-- HACER OBLIGATORIO EL CAMPO (DESPUÉS DE ACTUALIZAR)
+------------------------------------------------------------
+
+ALTER TABLE Usuario
+MODIFY (
+    idRol NUMBER NOT NULL
+);
+
+COMMIT;
