@@ -6,6 +6,7 @@ import com.risosuit.DiegoGomezTagleGestionProductos.Repository.UsuarioRepository
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import jakarta.transaction.Transactional;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
@@ -76,6 +77,7 @@ public class UsuarioDAOImplementation implements IUsuario {
                 }
                 return result;
             }
+            usuario.setStatus(1);
             result.object = usuarioRepository.save(usuario);
             result.correct = true;
             result.message = "Usuario registrado con éxito";
@@ -97,20 +99,24 @@ public class UsuarioDAOImplementation implements IUsuario {
                 result.message = "El usuario no existe.";
                 return result;
             }
+            Optional<Usuario> usuarioJPA = usuarioRepository.findById(usuario.getIdUsuario());
             Optional<Usuario> existente
                     = usuarioRepository.findByEmailOrUsernameAndIdUsuarioNot(
                             usuario.getEmail(),
                             usuario.getUsername(),
                             usuario.getIdUsuario());
-            if (existente.isPresent()) {
+            if (existente.isPresent() && (existente.get().equals(usuario)) ) {
                 result.correct = false;
                 if (existente.get().getEmail().equalsIgnoreCase(usuario.getEmail())) {
-                    result.message = "El email ya está registrado por otro usuario.";
+                    if (!existente.get().equals(usuario)) {
+                        result.message = "El email ya está registrado por otro usuario.";
+                    }
                 } else {
                     result.message = "El nombre de usuario ya está en uso.";
                 }
                 return result;
             }
+            usuario.setPassword(usuarioJPA.get().getPassword());
             result.object = usuarioRepository.save(usuario);
             result.correct = true;
             result.message = "Usuario actualizado con éxito";
@@ -133,10 +139,34 @@ public class UsuarioDAOImplementation implements IUsuario {
                 result.message = "El usuario no existe.";
                 return result;
             }
-            usuarioRepository.deleteById(idUsuario);
+            usuario.get().setStatus(usuario.get().getStatus() == 0 ? 1 : 0);
+            usuarioRepository.save(usuario.get());
             result.correct = true;
-            result.message = "Usuario eliminado con éxito";
+            result.message = usuario.get().getStatus() == 0 
+                    ? "Usuario desactivado con éxito"
+                    : "Usuario activado con éxito";
             result.object = usuario.get();
+        } catch (Exception e) {
+            result.correct = false;
+            result.message = e.getLocalizedMessage();
+            result.ex = e;
+        }
+        return result;
+    }
+
+    @Override
+    public Result<Usuario> getAll() {
+        Result<Usuario> result = new Result<>();
+        try {
+            List<Usuario> usuarios = usuarioRepository.findAll();
+            if (!usuarios.isEmpty()) {
+                result.correct = true;
+                result.message = "Usuario obtenido con éxito";
+                result.objects = usuarios;
+            } else {
+                result.correct = false;
+                result.message = "Usuario no encontrado";
+            }
         } catch (Exception e) {
             result.correct = false;
             result.message = e.getLocalizedMessage();
