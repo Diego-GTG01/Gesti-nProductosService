@@ -87,7 +87,7 @@ public class ProductoRestController {
         }
     }
 
-    @PutMapping()
+    @PutMapping
     public ResponseEntity<Result<Producto>> update(
             @RequestBody Producto producto) {
         Result<Producto> result = new Result<>();

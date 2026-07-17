@@ -16,13 +16,18 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * Genera el reporte de auditoría de productos en formato PDF.
@@ -80,13 +85,11 @@ public class ReportePdfService {
 
             estado.cerrar();
 
-            // === Serializar a bytes y Base64 ===
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             documento.save(bos);
             byte[] pdfBytes = bos.toByteArray();
             String base64 = Base64.getEncoder().encodeToString(pdfBytes);
 
-            // === Guardar también en disco ===
             String nombreArchivo = "reporte_auditoria_"
                     + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
                     + ".pdf";
@@ -106,6 +109,7 @@ public class ReportePdfService {
         return reporte;
     }
 
+    // ================= ESTADÍSTICAS =================
 
     private Estadisticas calcularEstadisticas(List<AuditoriaProducto> auditorias) {
         Estadisticas e = new Estadisticas();
@@ -113,7 +117,12 @@ public class ReportePdfService {
 
         Map<String, Long> porOperacion = new LinkedHashMap<>();
         Map<String, Long> porUsuario = new LinkedHashMap<>();
+        Map<Long, Long> conteoPorProducto = new LinkedHashMap<>();
+        Map<Long, String> nombrePorProducto = new LinkedHashMap<>();
         java.util.Set<Long> productosDistintos = new java.util.HashSet<>();
+        java.util.Set<Long> usuariosDistintos = new java.util.HashSet<>();
+        Map<LocalDate, Long> conteoPorDia = new java.util.HashMap<>();
+        Map<YearMonth, Long> conteoPorMes = new TreeMap<>();
         LocalDateTime minFecha = null;
         LocalDateTime maxFecha = null;
 
@@ -121,26 +130,84 @@ public class ReportePdfService {
             String operacion = a.getTipoOperacion() != null ? a.getTipoOperacion().getNombre() : "Sin especificar";
             porOperacion.merge(operacion, 1L, Long::sum);
 
-            String usuario = a.getUsuario() != null ? a.getUsuario().getUsername(): "Sistema / Anónimo";
+            String usuario = a.getUsuario() != null ? a.getUsuario().getUsername() : "Sistema / Anónimo";
             porUsuario.merge(usuario, 1L, Long::sum);
+            if (a.getUsuario() != null) {
+                usuariosDistintos.add(a.getUsuario().getIdUsuario());
+            }
 
             if (a.getProducto() != null) {
-                productosDistintos.add(a.getProducto().getIdProducto());
+                long idProd = a.getProducto().getIdProducto();
+                productosDistintos.add(idProd);
+                conteoPorProducto.merge(idProd, 1L, Long::sum);
+                nombrePorProducto.putIfAbsent(idProd, a.getProducto().getNombre());
             }
 
             LocalDateTime fecha = a.getFechaOperacion();
             if (fecha != null) {
                 if (minFecha == null || fecha.isBefore(minFecha)) minFecha = fecha;
                 if (maxFecha == null || fecha.isAfter(maxFecha)) maxFecha = fecha;
+                conteoPorDia.merge(fecha.toLocalDate(), 1L, Long::sum);
+                conteoPorMes.merge(YearMonth.from(fecha), 1L, Long::sum);
             }
         }
 
         e.movimientosPorOperacion = porOperacion;
         e.movimientosPorUsuario = porUsuario;
         e.productosDistintos = productosDistintos.size();
+        e.usuariosDistintos = usuariosDistintos.size();
         e.fechaPrimeraAuditoria = minFecha;
         e.fechaUltimaAuditoria = maxFecha;
+
+        if (minFecha != null && maxFecha != null) {
+            e.diasCubiertos = ChronoUnit.DAYS.between(minFecha.toLocalDate(), maxFecha.toLocalDate()) + 1;
+        }
+
+        if (!conteoPorDia.isEmpty()) {
+            e.promedioMovimientosPorDiaActivo = e.totalMovimientos / (double) conteoPorDia.size();
+            Map.Entry<LocalDate, Long> diaTop = null;
+            for (Map.Entry<LocalDate, Long> ent : conteoPorDia.entrySet()) {
+                if (diaTop == null || ent.getValue() > diaTop.getValue()) diaTop = ent;
+            }
+            e.diaConMasMovimientos = diaTop.getKey();
+            e.cantidadDiaConMasMovimientos = diaTop.getValue();
+        }
+
+        Map<String, Long> porMesFormateado = new LinkedHashMap<>();
+        DateTimeFormatter fmtMes = DateTimeFormatter.ofPattern("MMMM yyyy", new Locale("es", "ES"));
+        for (Map.Entry<YearMonth, Long> ent : conteoPorMes.entrySet()) {
+            porMesFormateado.put(capitalizar(ent.getKey().format(fmtMes)), ent.getValue());
+        }
+        e.movimientosPorMes = porMesFormateado;
+
+        List<Map.Entry<Long, Long>> productosOrdenados = new ArrayList<>(conteoPorProducto.entrySet());
+        productosOrdenados.sort((e1, e2) -> Long.compare(e2.getValue(), e1.getValue()));
+        Map<String, Long> topProductos = new LinkedHashMap<>();
+        for (int i = 0; i < Math.min(5, productosOrdenados.size()); i++) {
+            Map.Entry<Long, Long> ent = productosOrdenados.get(i);
+            topProductos.put(nombrePorProducto.getOrDefault(ent.getKey(), "Producto #" + ent.getKey()), ent.getValue());
+        }
+        e.topProductos = topProductos;
+
+        if (!productosOrdenados.isEmpty()) {
+            Map.Entry<Long, Long> top = productosOrdenados.get(0);
+            e.productoMasAuditado = nombrePorProducto.getOrDefault(top.getKey(), "Producto #" + top.getKey());
+            e.cantidadProductoMasAuditado = top.getValue();
+        }
+
+        for (Map.Entry<String, Long> ent : porUsuario.entrySet()) {
+            if (e.usuarioMasActivo == null || ent.getValue() > e.cantidadUsuarioMasActivo) {
+                e.usuarioMasActivo = ent.getKey();
+                e.cantidadUsuarioMasActivo = ent.getValue();
+            }
+        }
+
         return e;
+    }
+
+    private String capitalizar(String texto) {
+        if (texto == null || texto.isEmpty()) return texto;
+        return Character.toUpperCase(texto.charAt(0)) + texto.substring(1);
     }
 
     private void escribirTitulo(EstadoPdf estado) throws IOException {
@@ -161,30 +228,78 @@ public class ReportePdfService {
         estado.y -= 6f;
     }
 
-    private void escribirEstadisticas(EstadoPdf estado, Estadisticas stats) throws IOException {
-        estado.asegurarEspacio(18f);
+    private void escribirSubtitulo(EstadoPdf estado, String texto) throws IOException {
+        texto = sanitizarTexto(texto);
+        estado.asegurarEspacio(ALTO_LINEA + 8f);
+        estado.y -= 4f;
         estado.cs.beginText();
         estado.cs.setFont(fuenteNegrita, 12);
         estado.cs.newLineAtOffset(MARGEN, estado.y);
-        estado.cs.showText("Estadísticas de la Auditoría");
+        estado.cs.showText(texto);
         estado.cs.endText();
         estado.y -= ALTO_LINEA + 2;
+    }
 
+    private void escribirEstadisticas(EstadoPdf estado, Estadisticas stats) throws IOException {
+        escribirSubtitulo(estado, "Estadísticas de la Auditoría");
+
+        escribirSubtitulo(estado, "Resumen General");
+        escribirLineaEtiquetaValor(estado, "Total de movimientos:", String.valueOf(stats.totalMovimientos));
         escribirLineaEtiquetaValor(estado, "Productos distintos afectados:", String.valueOf(stats.productosDistintos));
-
+        escribirLineaEtiquetaValor(estado, "Usuarios distintos que realizaron cambios:", String.valueOf(stats.usuariosDistintos));
         if (stats.fechaPrimeraAuditoria != null && stats.fechaUltimaAuditoria != null) {
             escribirLineaEtiquetaValor(estado, "Primer movimiento registrado:", stats.fechaPrimeraAuditoria.format(FMT_FECHA_HORA));
             escribirLineaEtiquetaValor(estado, "Último movimiento registrado:", stats.fechaUltimaAuditoria.format(FMT_FECHA_HORA));
+            escribirLineaEtiquetaValor(estado, "Periodo cubierto:", stats.diasCubiertos + " día(s)");
         }
 
-        escribirLineaEtiquetaValor(estado, "Movimientos por tipo de operación:", "");
+        escribirSubtitulo(estado, "Actividad");
+        if (stats.diaConMasMovimientos != null) {
+            escribirLineaEtiquetaValor(estado, "Promedio de movimientos por día activo:",
+                    String.format(Locale.US, "%.2f", stats.promedioMovimientosPorDiaActivo));
+            escribirLineaEtiquetaValor(estado, "Día con mayor actividad:",
+                    stats.diaConMasMovimientos.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                            + " (" + stats.cantidadDiaConMasMovimientos + " movimiento(s))");
+        }
+        if (stats.usuarioMasActivo != null) {
+            escribirLineaEtiquetaValor(estado, "Usuario más activo:",
+                    stats.usuarioMasActivo + " (" + stats.cantidadUsuarioMasActivo + " movimiento(s))");
+        }
+        if (stats.productoMasAuditado != null) {
+            escribirLineaEtiquetaValor(estado, "Producto más auditado:",
+                    stats.productoMasAuditado + " (" + stats.cantidadProductoMasAuditado + " movimiento(s))");
+        }
+
+        escribirSubtitulo(estado, "Movimientos por Tipo de Operación");
         for (Map.Entry<String, Long> entry : stats.movimientosPorOperacion.entrySet()) {
-            escribirLineaEtiquetaValor(estado, "   • " + entry.getKey() + ":", String.valueOf(entry.getValue()));
+            double pct = stats.totalMovimientos > 0 ? (entry.getValue() * 100.0 / stats.totalMovimientos) : 0;
+            escribirLineaEtiquetaValor(estado, "   • " + entry.getKey() + ":",
+                    entry.getValue() + " (" + String.format(Locale.US, "%.1f", pct) + "%)");
         }
 
-        escribirLineaEtiquetaValor(estado, "Movimientos por usuario:", "");
+        escribirSubtitulo(estado, "Movimientos por Usuario");
         for (Map.Entry<String, Long> entry : stats.movimientosPorUsuario.entrySet()) {
-            escribirLineaEtiquetaValor(estado, "   • " + entry.getKey() + ":", String.valueOf(entry.getValue()));
+            double pct = stats.totalMovimientos > 0 ? (entry.getValue() * 100.0 / stats.totalMovimientos) : 0;
+            escribirLineaEtiquetaValor(estado, "   • " + entry.getKey() + ":",
+                    entry.getValue() + " (" + String.format(Locale.US, "%.1f", pct) + "%)");
+        }
+
+        if (stats.topProductos != null && !stats.topProductos.isEmpty()) {
+            escribirSubtitulo(estado, "Top " + stats.topProductos.size() + " Productos con Más Movimientos");
+            int puesto = 1;
+            for (Map.Entry<String, Long> entry : stats.topProductos.entrySet()) {
+                escribirLineaEtiquetaValor(estado, "   " + puesto + ". " + entry.getKey() + ":", String.valueOf(entry.getValue()));
+                puesto++;
+            }
+        }
+
+        if (stats.movimientosPorMes != null && !stats.movimientosPorMes.isEmpty()) {
+            escribirSubtitulo(estado, "Movimientos por Mes");
+            for (Map.Entry<String, Long> entry : stats.movimientosPorMes.entrySet()) {
+                double pct = stats.totalMovimientos > 0 ? (entry.getValue() * 100.0 / stats.totalMovimientos) : 0;
+                escribirLineaEtiquetaValor(estado, "   • " + entry.getKey() + ":",
+                        entry.getValue() + " (" + String.format(Locale.US, "%.1f", pct) + "%)");
+            }
         }
 
         estado.y -= 10f;
@@ -236,12 +351,13 @@ public class ReportePdfService {
 
         estado.y -= alturaFila;
         estado.filaZebra = false;
+        estado.paginaNueva = false;
     }
 
     private void escribirFilaAuditoria(EstadoPdf estado, AuditoriaProducto auditoria) throws IOException {
         String idStr = String.valueOf(auditoria.getIdAuditoria());
         String fechaStr = auditoria.getFechaOperacion() != null ? auditoria.getFechaOperacion().format(FMT_FECHA_HORA) : "-";
-        String usuarioStr = auditoria.getUsuario() != null ? auditoria.getUsuario().getUsername(): "Sistema / Anónimo";
+        String usuarioStr = auditoria.getUsuario() != null ? auditoria.getUsuario().getUsername() : "Sistema / Anónimo";
         String productoStr = auditoria.getProducto() != null ? auditoria.getProducto().getNombre() : "N/A";
         String operacionStr = auditoria.getTipoOperacion() != null ? auditoria.getTipoOperacion().getNombre() : "-";
         String descripcionStr = auditoria.getDescripcionCambio() != null ? auditoria.getDescripcionCambio() : "";
@@ -296,7 +412,6 @@ public class ReportePdfService {
         estado.y -= alturaFila;
     }
 
-  
     private String sanitizarTexto(String texto) {
         if (texto == null) return "";
         String limpio = texto.replaceAll("[\\n\\r\\t]+", " ").trim();
@@ -353,7 +468,8 @@ public class ReportePdfService {
         return lineas;
     }
 
-  
+    // ================= PERSISTENCIA EN DISCO =================
+
     private Path guardarEnDisco(byte[] pdfBytes, String nombreArchivo) throws IOException {
         Path carpeta = Paths.get(directorioSalida);
         if (!Files.exists(carpeta)) {
@@ -364,14 +480,24 @@ public class ReportePdfService {
         return rutaArchivo;
     }
 
-  
     private static class Estadisticas {
         int totalMovimientos;
         int productosDistintos;
+        int usuariosDistintos;
         LocalDateTime fechaPrimeraAuditoria;
         LocalDateTime fechaUltimaAuditoria;
+        long diasCubiertos;
+        double promedioMovimientosPorDiaActivo;
+        LocalDate diaConMasMovimientos;
+        long cantidadDiaConMasMovimientos;
+        String usuarioMasActivo;
+        long cantidadUsuarioMasActivo;
+        String productoMasAuditado;
+        long cantidadProductoMasAuditado;
         Map<String, Long> movimientosPorOperacion;
         Map<String, Long> movimientosPorUsuario;
+        Map<String, Long> movimientosPorMes;
+        Map<String, Long> topProductos;
     }
 
     private class EstadoPdf {
