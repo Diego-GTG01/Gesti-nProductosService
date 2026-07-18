@@ -11,5 +11,7 @@ public interface IDepartamento {
     Result<Departamento> add(Departamento departamento);
 
     Result<Departamento> update(Departamento departamento);
+    
+    Result<Departamento> delete (long idProducto);
 
 }

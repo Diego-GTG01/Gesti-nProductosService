@@ -23,5 +23,8 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
     @EntityGraph(attributePaths = "usuario")
     Optional<Producto> findByClave(String clave);
     
+    @EntityGraph(attributePaths = "usuario")
+    List<Producto> findByDepartamento_IdDepartamento(long idDepartamento);
+    
 
 }

@@ -57,7 +57,6 @@ public class ReportePdfService {
     private static final DateTimeFormatter FMT_FECHA_HORA = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private static final String[] HEADERS = {"ID", "Fecha y Hora", "Usuario", "Producto", "Operación", "Descripción"};
-    // Deben coincidir en cantidad con HEADERS; suman ~480pt (dentro del área útil de A4)
     private static final float[] ANCHOS_COL = {35f, 80f, 85f, 85f, 65f, 130f};
 
     private final PDFont fuenteTitulo = PDType1Font.HELVETICA_BOLD;

@@ -190,12 +190,14 @@ public class ProductoDAOImplementation implements IProducto {
             Departamento departamento = departamentoRepository
                     .findById(producto.getDepartamento().getIdDepartamento())
                     .orElse(null);
+            
 
             if (departamento == null) {
                 result.correct = false;
                 result.message = "El departamento no existe";
                 return result;
             }
+            producto.setFolio(generarFolio(producto));
 
             StringBuilder descripcion = new StringBuilder("Se modificó el producto:");
 
