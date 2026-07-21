@@ -47,11 +47,8 @@ public class ReporteRestController {
         return ResponseEntity.ok().body(result);
     }
 
-    /**
-     * Genera el reporte Excel de productos aplicando los filtros de búsqueda recibidos.
-     * Todos los filtros son opcionales; si no se envía ninguno, se reporta el catálogo completo.
-     */
-    @PostMapping("productos/excel")
+    
+    @GetMapping("productos/excel")
     public ResponseEntity<Result<Reporte>> obtenerReporteProductosExcel(
             @RequestParam(required = false) String nombre,
             @RequestParam(required = false) Long idDepartamento,

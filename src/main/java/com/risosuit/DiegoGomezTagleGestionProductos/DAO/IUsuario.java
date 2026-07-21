@@ -4,12 +4,14 @@ import com.risosuit.DiegoGomezTagleGestionProductos.DTO.Result;
 import com.risosuit.DiegoGomezTagleGestionProductos.JPA.Usuario;
 
 public interface IUsuario {
-    
+
     Result<Usuario> getAll();
 
     Result<Usuario> getByUsername(String username);
 
     Result<Usuario> getByEmail(String username);
+
+    Result<Usuario> getByIdUsuario(long idUsuario);
 
     Result<Usuario> add(Usuario usuarioJPA);
 

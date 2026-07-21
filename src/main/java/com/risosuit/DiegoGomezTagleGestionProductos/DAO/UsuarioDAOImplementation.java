@@ -58,6 +58,28 @@ public class UsuarioDAOImplementation implements IUsuario {
         }
         return result;
     }
+    
+    
+    @Override
+    public Result<Usuario> getByIdUsuario(long idUsuario) {
+        Result<Usuario> result = new Result<>();
+        try {
+            Optional<Usuario> usuario = usuarioRepository.findById(idUsuario);
+            if (usuario.isPresent()) {
+                result.correct = true;
+                result.message = "Usuario obtenido con éxito";
+                result.object = usuario.get();
+            } else {
+                result.correct = false;
+                result.message = "Usuario no encontrado";
+            }
+        } catch (Exception e) {
+            result.correct = false;
+            result.message = e.getLocalizedMessage();
+            result.ex = e;
+        }
+        return result;
+    }
 
     @Override
     @Transactional

@@ -11,8 +11,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
-import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
@@ -49,13 +56,15 @@ public class AuthRestController {
                     usuario.getUsername(),
                     usuario.getIdUsuario()
             );
+            
+            String rol = usuario.getRol().getNombre();
+            System.out.println(rol);
 
             result.correct = true;
             result.message = "Usuario logueado";
-            result.object = new LoginResponse(token, usuario.getUsername(), usuario.getIdUsuario());
-
+            result.object = new LoginResponse(token, usuario.getUsername(), 
+                    usuario.getIdUsuario(), rol);
             return ResponseEntity.ok(result);
-
         } catch (BadCredentialsException ex) {
 
             result.correct = false;

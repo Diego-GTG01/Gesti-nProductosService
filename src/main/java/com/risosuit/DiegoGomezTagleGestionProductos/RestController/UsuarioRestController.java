@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
 @RequestMapping("/user")
@@ -37,6 +38,32 @@ public class UsuarioRestController {
                 resultDTO.objects.add(ToDTO(usuario));
             }
             if (result.correct) {
+                return ResponseEntity.ok(resultDTO);
+            } else {
+                return ResponseEntity.badRequest().body(resultDTO);
+            }
+        } catch (Exception e) {
+            resultDTO.correct = false;
+            resultDTO.message = e.getLocalizedMessage();
+            resultDTO.ex = e;
+            return ResponseEntity.internalServerError().body(resultDTO);
+        }
+    }
+
+    @GetMapping(params = "idUsuario")
+    public ResponseEntity<Result<UsuarioDTO>> getByIdUsuario(
+            @RequestParam("idUsuario") long idUsuario) {
+        Result<Usuario> result = new Result<Usuario>();
+        Result<UsuarioDTO> resultDTO = new Result<UsuarioDTO>();
+        resultDTO.objects = new ArrayList<>();
+        try {
+            result = usuarioDAO.getByIdUsuario(idUsuario);
+            resultDTO.object = ToDTO(result.object);
+            resultDTO.correct= result.correct;
+            resultDTO.message= result.message;
+            
+                    
+            if (resultDTO.correct) {
                 return ResponseEntity.ok(resultDTO);
             } else {
                 return ResponseEntity.badRequest().body(resultDTO);

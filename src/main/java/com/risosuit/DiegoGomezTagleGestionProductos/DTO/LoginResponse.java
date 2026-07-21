@@ -9,11 +9,21 @@ public class LoginResponse {
     private String token;
     private String username;
     private long idUsuario;
+    private String rol;
 
-    public LoginResponse(String token, String username, long idUsuario) {
+    public String getRol() {
+        return rol;
+    }
+
+    public void setRol(String rol) {
+        this.rol = rol;
+    }
+
+    public LoginResponse(String token, String username, long idUsuario, String rol) {
         this.token = token;
         this.username = username;
         this.idUsuario = idUsuario;
+        this.rol = rol;
     }
     
     
