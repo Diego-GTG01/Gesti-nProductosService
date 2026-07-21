@@ -1,4 +1,3 @@
-
 package com.risosuit.DiegoGomezTagleGestionProductos.Repository;
 
 import com.risosuit.DiegoGomezTagleGestionProductos.JPA.TipoOperacion;

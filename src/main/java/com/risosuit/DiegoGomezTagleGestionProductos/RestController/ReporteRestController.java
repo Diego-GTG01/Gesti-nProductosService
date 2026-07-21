@@ -48,7 +48,7 @@ public class ReporteRestController {
     }
 
     
-    @GetMapping("productos/excel")
+    @PostMapping("productos/excel")
     public ResponseEntity<Result<Reporte>> obtenerReporteProductosExcel(
             @RequestParam(required = false) String nombre,
             @RequestParam(required = false) Long idDepartamento,

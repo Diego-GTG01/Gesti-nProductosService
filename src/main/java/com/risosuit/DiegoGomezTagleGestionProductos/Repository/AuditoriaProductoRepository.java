@@ -1,7 +1,6 @@
 package com.risosuit.DiegoGomezTagleGestionProductos.Repository;
 
 import com.risosuit.DiegoGomezTagleGestionProductos.JPA.AuditoriaProducto;
-import com.risosuit.DiegoGomezTagleGestionProductos.JPA.Producto;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;

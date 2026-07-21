@@ -4,9 +4,7 @@ import com.risosuit.DiegoGomezTagleGestionProductos.DAO.UsuarioDAOImplementation
 import com.risosuit.DiegoGomezTagleGestionProductos.DTO.Result;
 import com.risosuit.DiegoGomezTagleGestionProductos.DTO.UsuarioDTO;
 
-import com.risosuit.DiegoGomezTagleGestionProductos.JPA.AuditoriaProducto;
 import com.risosuit.DiegoGomezTagleGestionProductos.JPA.Usuario;
-import com.risosuit.DiegoGomezTagleGestionProductos.Repository.UsuarioRepository;
 import java.util.ArrayList;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

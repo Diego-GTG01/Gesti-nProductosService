@@ -254,16 +254,11 @@ public class ProductosReporteService {
             CreationHelper helper = workbook.getCreationHelper();
 
             ClientAnchor anchor = helper.createClientAnchor();
-
-            // Celda donde inicia la imagen
             anchor.setCol1(columna);
             anchor.setRow1(fila);
-
-            // Celda donde termina (una sola celda)
             anchor.setCol2(columna + 1);
             anchor.setRow2(fila + 1);
 
-            // Márgenes internos (opcional)
             anchor.setDx1(500);
             anchor.setDy1(500);
             anchor.setDx2(-600);
@@ -271,8 +266,6 @@ public class ProductosReporteService {
 
             Picture picture = drawing.createPicture(anchor, pictureIdx);
 
-            // NO llamar a resize()
-            // picture.resize();
         } catch (Exception e) {
             e.printStackTrace();
         }

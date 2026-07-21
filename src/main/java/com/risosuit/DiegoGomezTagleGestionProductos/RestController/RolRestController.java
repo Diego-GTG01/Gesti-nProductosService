@@ -2,11 +2,7 @@ package com.risosuit.DiegoGomezTagleGestionProductos.RestController;
 
 import com.risosuit.DiegoGomezTagleGestionProductos.DAO.RolDAOImplementation;
 import com.risosuit.DiegoGomezTagleGestionProductos.DTO.Result;
-import com.risosuit.DiegoGomezTagleGestionProductos.JPA.Producto;
 import com.risosuit.DiegoGomezTagleGestionProductos.JPA.Rol;
-import com.risosuit.DiegoGomezTagleGestionProductos.Repository.RolRepository;
-import java.util.ArrayList;
-import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

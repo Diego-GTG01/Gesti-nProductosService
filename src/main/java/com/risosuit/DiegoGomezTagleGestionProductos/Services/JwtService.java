@@ -28,13 +28,8 @@ public class JwtService {
 
     }
 
-    /**
-     * Genera el token JWT agregando: - username - idUsuario
-     */
     public String generateToken(String username, Long idUsuario) {
-
         Date now = new Date();
-
         Date expiration = new Date(
                 now.getTime() + 1000 * 60 * 120
         );
@@ -49,7 +44,6 @@ public class JwtService {
 
     }
 
-   
     public String extractUsername(String token) {
 
         return getClaims(token)
@@ -57,9 +51,6 @@ public class JwtService {
 
     }
 
-    /**
-     * Obtiene el idUsuario del token
-     */
     public Long extractIdUsuario(String token) {
 
         return getClaims(token)
@@ -67,9 +58,6 @@ public class JwtService {
 
     }
 
-    /**
-     * Valida que el token pertenezca al usuario y que no esté expirado
-     */
     public boolean isTokenValid(String token, String username) {
 
         return extractUsername(token).equals(username)
@@ -77,11 +65,7 @@ public class JwtService {
 
     }
 
-    /**
-     * Valida si el token expiró
-     */
     public boolean isTokenExpired(String token) {
-
         return getClaims(token)
                 .getExpiration()
                 .before(new Date());
@@ -97,11 +81,8 @@ public class JwtService {
                     .getPayload();
 
         } catch (JwtException e) {
-
             throw new RuntimeException("Token inválido");
-
         }
-
     }
 
 }

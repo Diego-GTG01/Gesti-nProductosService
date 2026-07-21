@@ -3,8 +3,7 @@ package com.risosuit.DiegoGomezTagleGestionProductos.DAO;
 import com.risosuit.DiegoGomezTagleGestionProductos.DTO.Result;
 import com.risosuit.DiegoGomezTagleGestionProductos.JPA.Usuario;
 import com.risosuit.DiegoGomezTagleGestionProductos.Repository.UsuarioRepository;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.TypedQuery;
+
 import jakarta.transaction.Transactional;
 import java.util.List;
 import java.util.Optional;

@@ -29,24 +29,10 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 
-/**
- * Genera el reporte de auditoría de productos en formato PDF.
- * - Devuelve el archivo codificado en Base64 dentro de un objeto Reporte.
- * - Además guarda una copia física del PDF en una carpeta configurable.
- *
- * Requiere la dependencia de Apache PDFBox en el pom.xml:
- *
- * <dependency>
- *     <groupId>org.apache.pdfbox</groupId>
- *     <artifactId>pdfbox</artifactId>
- *     <version>2.0.30</version>
- * </dependency>
- */
+
 @Service
 public class ReportePdfService {
 
-    // Carpeta donde se guarda el PDF físico. Configurable en application.properties:
-    // reportes.pdf.directorio=C:/reportes/auditoria  (o una ruta relativa/absoluta que prefieras)
     @Value("${reportes.pdf.directorio:reportes/auditoria}")
     private String directorioSalida;
 
@@ -107,8 +93,6 @@ public class ReportePdfService {
 
         return reporte;
     }
-
-    // ================= ESTADÍSTICAS =================
 
     private Estadisticas calcularEstadisticas(List<AuditoriaProducto> auditorias) {
         Estadisticas e = new Estadisticas();
@@ -466,8 +450,6 @@ public class ReportePdfService {
         if (lineas.isEmpty()) lineas.add("");
         return lineas;
     }
-
-    // ================= PERSISTENCIA EN DISCO =================
 
     private Path guardarEnDisco(byte[] pdfBytes, String nombreArchivo) throws IOException {
         Path carpeta = Paths.get(directorioSalida);

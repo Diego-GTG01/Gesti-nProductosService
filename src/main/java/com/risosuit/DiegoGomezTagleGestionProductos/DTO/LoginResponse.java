@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.risosuit.DiegoGomezTagleGestionProductos.DTO;
 
 public class LoginResponse {
@@ -25,8 +21,6 @@ public class LoginResponse {
         this.idUsuario = idUsuario;
         this.rol = rol;
     }
-    
-    
 
     public long getIdUsuario() {
         return idUsuario;
@@ -35,7 +29,6 @@ public class LoginResponse {
     public void setIdUsuario(long idUsuario) {
         this.idUsuario = idUsuario;
     }
-    
 
     public LoginResponse(String token, String username) {
         this.token = token;
